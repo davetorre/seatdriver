@@ -1,30 +1,27 @@
 var context,
-    kickArray = [],
-    snareArray = [],
-    bufferLoader,
-    urlList = ["audio/SeatDriver073013kick.mp3",
-               "audio/SeatDriver073013snare.mp3",
-               "audio/SeatDriver073013bg.mp3",
-               "audio/Cowbell.mp3"
-              ],
+    bufferLoader,     
     bufferList = [],
-    numOfSteps = 16,
-    currentStep,
-    nextStepTime,
-    tempo = 112.0,
-    timerID,
-    isPlaying = false,
-    lookAheadTime = 0.2,
-    backTrackSource;
+    drumMachine,
+    music,
+    playButton = document.getElementById('playButton'),
+    pauseButton = document.getElementById('pauseButton'),
+    stopButton = document.getElementById('stopButton');
 
 bufferLoader = {
+    urlList: ["audio/SeatDriver073013kick.mp3",
+              "audio/SeatDriver073013snare.mp3",
+              "audio/SeatDriver073013bg.mp3",
+              "audio/Cowbell.mp3"
+             ],
     loadBuffer: function (url, index) {
         var request = new XMLHttpRequest();
+        var that = this;
         function callback(buffer) {
             bufferList[index] = buffer;
-            if (index + 1 === urlList.length) {
+            if (index + 1 === that.urlList.length) {
                 document.getElementById('title').innerHTML = 'Seat Driver';
-                document.getElementById('title2').innerHTML = 'Click some stuff, beatmaker.';
+                document.getElementById('title2').innerHTML =
+                                            'Click some stuff, beatmaker.';
             }
         }
         request.open("get", url, true);
@@ -35,96 +32,134 @@ bufferLoader = {
         request.send();
     },
     load: function () {
-        for (var i = 0; i < urlList.length; i += 1) {
-            this.loadBuffer(urlList[i], i);
+        for (var i = 0; i < this.urlList.length; i += 1) {
+            this.loadBuffer(this.urlList[i], i);
         }
     }
 };
 
-function playSound(buffer, delay) {
-    var source = context.createBufferSource();
-    source.buffer = buffer;
-    source.loop = false;
-    source.connect(context.destination);
-    source.noteOn(delay);
-}
-
-function scheduler() {
-    if (nextStepTime < context.currentTime + lookAheadTime) {
-        if (kickArray[currentStep] === true) {
-            playSound(bufferList[0], nextStepTime);
+drumMachine = {
+    kickArray: [],
+    snareArray: [],
+    currentStep: 0,
+    numOfSteps: 16,
+    nextStepTime: null,
+    tempo: 112,
+    lookAheadTime: 0.15,
+    timerID: null,
+    isPlaying: false,
+    start: function (stepNumber, time) {
+        if (!this.isPlaying) {
+            this.currentStep = stepNumber;
+            this.nextStepTime = time;
+            this.scheduler();
+            this.isPlaying = true;
         }
-        if (snareArray[currentStep] === true) {
-            playSound(bufferList[1], nextStepTime);
+    },
+    playSound: function (buffer, delay) {
+        var source = context.createBufferSource();
+        source.buffer = buffer;
+        source.loop = false;
+        source.connect(context.destination);
+        source.noteOn(delay);
+    },
+    scheduler: function () {
+        var that = this;
+        function callScheduler() {
+            that.scheduler();
         }
-        nextStepTime += 60 / (tempo * 4);
-        currentStep += 1;
-        if (currentStep === numOfSteps) {
-            currentStep = 0;
+        if (this.nextStepTime < context.currentTime + this.lookAheadTime) {
+            if (this.kickArray[this.currentStep] === true) {
+                this.playSound(bufferList[0], this.nextStepTime);
+            }
+            if (this.snareArray[this.currentStep] === true) {
+                this.playSound(bufferList[1], this.nextStepTime);
+            }
+            this.nextStepTime += 60 / (this.tempo * 4);
+            this.currentStep += 1;
+            if (this.currentStep === this.numOfSteps) {
+                this.currentStep = 0;
+            }
         }
+        this.timerID = window.setTimeout(callScheduler, 100.0);
+    },
+    toggleKick: function (id) {
+        var btn = document.getElementById(id);
+        var index = id.slice(1);
+        if (this.kickArray[index] === false) {
+            btn.style.backgroundColor = "#FFFFFF";
+            this.kickArray[index] = true;
+        } else {
+            btn.style.backgroundColor = "#5d5d5d";
+            this.kickArray[index] = false;
+        }
+    },
+    toggleSnare: function (id) {
+        var btn = document.getElementById(id);
+        var index = id.slice(1);
+        if (this.snareArray[index] === false) {
+            btn.style.backgroundColor = "#FFFFFF";
+            this.snareArray[index] = true;
+        } else {
+            btn.style.backgroundColor = "#5d5d5d";
+            this.snareArray[index] = false;
+        }
+    },
+    stop: function () {
+        window.clearTimeout(this.timerID);
+        this.isPlaying = false;
     }
-    timerID = window.setTimeout(scheduler, 100.0);
-}
+};
 
-function startPlayback() {
-    if (!isPlaying) {
-        backTrackSource = context.createBufferSource();
-        backTrackSource.buffer = bufferList[2];
-        backTrackSource.loop = false;
-        backTrackSource.connect(context.destination);
-        backTrackSource.noteOn(0);
-        nextStepTime = context.currentTime;
-        currentStep = 0;
-        scheduler(); //start the clock
-        isPlaying = true;
+music = {
+    isPlaying: false,
+    source: null,
+    start: function () {
+        if (!this.isPlaying) {
+            this.source = context.createBufferSource();
+            this.source.buffer = bufferList[2];
+            this.source.loop = false;
+            this.source.connect(context.destination);
+            this.source.noteOn(0);
+            this.isPlaying = true;
+        }
+    },
+    stop: function () {
+        this.source.disconnect();
+        this.isPlaying = false;
     }
-}
+};
 
-function pausePlayback() {
-    playSound(bufferList[3], 0); //have not solved the pause problem yet, cowbell button for now
-}
+playButton.onclick = function () {
+    music.start();
+    drumMachine.start(0, context.currentTime);
+};  
+  
+pauseButton.onclick = function () {
+    //have not solved the pause problem yet, cowbell button for now
+    drumMachine.playSound(bufferList[3], 0);
+};
 
-function stopPlayback() {
-    backTrackSource.disconnect();
-    window.clearTimeout(timerID);
-    isPlaying = false;
-}
-
-function toggleKick(id) {
-    var btn = document.getElementById(id),
-        index = id.slice(1);
-    if (kickArray[index] === false) {
-        btn.style.backgroundColor = "#FFFFFF";
-        kickArray[index] = true;
-    } else {
-        btn.style.backgroundColor = "#5d5d5d";
-        kickArray[index] = false;
-    }
-}
-
-function toggleSnare(id) {
-    var btn = document.getElementById(id),
-        index = id.slice(1);
-    if (snareArray[index] === false) {
-        btn.style.backgroundColor = "#FFFFFF";
-        snareArray[index] = true;
-    } else {
-        btn.style.backgroundColor = "#5d5d5d";
-        snareArray[index] = false;
-    }
-}
+stopButton.onclick = function () {
+    music.stop();
+    drumMachine.stop();
+};
 
 function init() {
     var i;
     context = new webkitAudioContext();
+
+    //start with a simple drum pattern
     for (i = 0; i < 16; i += 1) {
-        kickArray[i] = false;
-        snareArray[i] = false;
+        drumMachine.kickArray[i] = false;
+        drumMachine.snareArray[i] = false;
     }
-    toggleKick('k0');
-    toggleKick('k8');
-    toggleSnare('s4');
-    toggleSnare('s12');
+    drumMachine.toggleKick('k0');
+    drumMachine.toggleKick('k8');
+    drumMachine.toggleSnare('s4');
+    drumMachine.toggleSnare('s12');
+
+    //load all audio files
     bufferLoader.load();
 }
 
