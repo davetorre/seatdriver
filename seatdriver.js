@@ -1,5 +1,5 @@
 var context,
-    bufferLoader,     
+    bufferLoader,
     bufferList = [],
     drumMachine,
     music,
@@ -14,8 +14,8 @@ bufferLoader = {
               "audio/Cowbell.mp3"
              ],
     loadBuffer: function (url, index) {
-        var request = new XMLHttpRequest();
-        var that = this;
+        var request = new XMLHttpRequest(),
+            that = this;
         function callback(buffer) {
             bufferList[index] = buffer;
             if (index + 1 === that.urlList.length) {
@@ -28,11 +28,12 @@ bufferLoader = {
         request.responseType = "arraybuffer";
         request.onload = function () {
             context.decodeAudioData(request.response, callback);
-        }
+        };
         request.send();
     },
     load: function () {
-        for (var i = 0; i < this.urlList.length; i += 1) {
+        var i;
+        for (i = 0; i < this.urlList.length; i += 1) {
             this.loadBuffer(this.urlList[i], i);
         }
     }
@@ -52,8 +53,8 @@ drumMachine = {
         if (!this.isPlaying) {
             this.currentStep = stepNumber;
             this.nextStepTime = time;
-            this.scheduler();
             this.isPlaying = true;
+            this.scheduler();
         }
     },
     playSound: function (buffer, delay) {
@@ -84,8 +85,8 @@ drumMachine = {
         this.timerID = window.setTimeout(callScheduler, 100.0);
     },
     toggleKick: function (id) {
-        var btn = document.getElementById(id);
-        var index = id.slice(1);
+        var btn = document.getElementById(id),
+            index = id.slice(1);
         if (this.kickArray[index] === false) {
             btn.style.backgroundColor = "#FFFFFF";
             this.kickArray[index] = true;
@@ -95,8 +96,8 @@ drumMachine = {
         }
     },
     toggleSnare: function (id) {
-        var btn = document.getElementById(id);
-        var index = id.slice(1);
+        var btn = document.getElementById(id),
+            index = id.slice(1);
         if (this.snareArray[index] === false) {
             btn.style.backgroundColor = "#FFFFFF";
             this.snareArray[index] = true;
@@ -133,8 +134,8 @@ music = {
 playButton.onclick = function () {
     music.start();
     drumMachine.start(0, context.currentTime);
-};  
-  
+};
+
 pauseButton.onclick = function () {
     //have not solved the pause problem yet, cowbell button for now
     drumMachine.playSound(bufferList[3], 0);
