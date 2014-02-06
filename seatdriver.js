@@ -8,6 +8,7 @@ var context,
     stopButton = document.getElementById('stopButton');
 
 bufferLoader = {
+    loadCount: 0,
     urlList: ["audio/SeatDriver073013kick.mp3",
               "audio/SeatDriver073013snare.mp3",
               "audio/SeatDriver073013bg.mp3",
@@ -18,7 +19,8 @@ bufferLoader = {
             that = this;
         function callback(buffer) {
             bufferList[index] = buffer;
-            if (index + 1 === that.urlList.length) {
+            that.loadCount++;
+            if (that.loadCount === that.urlList.length) {
                 document.getElementById('title').innerHTML = 'Seat Driver';
                 document.getElementById('title2').innerHTML =
                                             'Click some stuff, beatmaker.';
@@ -49,10 +51,10 @@ drumMachine = {
     lookAheadTime: 0.15,
     timerID: null,
     isPlaying: false,
-    start: function (stepNumber, time) {
+    start: function () {
         if (!this.isPlaying) {
-            this.currentStep = stepNumber;
-            this.nextStepTime = time;
+            this.currentStep = 0;
+            this.nextStepTime = context.currentTime;
             this.isPlaying = true;
             this.scheduler();
         }
@@ -133,7 +135,7 @@ music = {
 
 playButton.onclick = function () {
     music.start();
-    drumMachine.start(0, context.currentTime);
+    drumMachine.start();
 };
 
 pauseButton.onclick = function () {
