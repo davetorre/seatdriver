@@ -3,6 +3,7 @@ var context,
     bufferList = [],
     drumMachine,
     music,
+    finishedLoading,
     playButton = document.getElementById('playButton'),
     pauseButton = document.getElementById('pauseButton'),
     stopButton = document.getElementById('stopButton');
@@ -21,9 +22,8 @@ bufferLoader = {
             bufferList[index] = buffer;
             that.loadCount++;
             if (that.loadCount === that.urlList.length) {
-                document.getElementById('title').innerHTML = 'Seat Driver';
-                document.getElementById('title2').innerHTML =
-                                            'Click some stuff, beatmaker.';
+                // do the rest of the prep work
+                finishedLoading();
             }
         }
         request.open("get", url, true);
@@ -41,10 +41,30 @@ bufferLoader = {
     }
 };
 
+finishedLoading = function () {
+    playButton.onclick = function () {
+        music.start();
+        drumMachine.start();
+    };
+
+    pauseButton.onclick = function () {
+        //have not solved the pause problem yet, cowbell button for now
+        drumMachine.playSound(bufferList[3], 0);
+    };
+
+    stopButton.onclick = function () {
+        music.stop();
+        drumMachine.stop();
+    };
+    document.getElementById('title').innerHTML = 'Seat Driver';
+    document.getElementById('title2').innerHTML =
+                                'Click some stuff, beatmaker.';
+};
+
 drumMachine = {
     kickArray: [],
     snareArray: [],
-    currentStep: 0,
+    nextStep: 0,
     numOfSteps: 16,
     nextStepTime: null,
     tempo: 112,
@@ -53,7 +73,7 @@ drumMachine = {
     isPlaying: false,
     start: function () {
         if (!this.isPlaying) {
-            this.currentStep = 0;
+            this.nextStep = 0;
             this.nextStepTime = context.currentTime;
             this.isPlaying = true;
             this.scheduler();
@@ -64,7 +84,7 @@ drumMachine = {
         source.buffer = buffer;
         source.loop = false;
         source.connect(context.destination);
-        source.noteOn(delay);
+        source.start(delay);
     },
     scheduler: function () {
         var that = this;
@@ -72,16 +92,16 @@ drumMachine = {
             that.scheduler();
         }
         if (this.nextStepTime < context.currentTime + this.lookAheadTime) {
-            if (this.kickArray[this.currentStep] === true) {
+            if (this.kickArray[this.nextStep] === true) {
                 this.playSound(bufferList[0], this.nextStepTime);
             }
-            if (this.snareArray[this.currentStep] === true) {
+            if (this.snareArray[this.nextStep] === true) {
                 this.playSound(bufferList[1], this.nextStepTime);
             }
             this.nextStepTime += 60 / (this.tempo * 4);
-            this.currentStep += 1;
-            if (this.currentStep === this.numOfSteps) {
-                this.currentStep = 0;
+            this.nextStep += 1;
+            if (this.nextStep === this.numOfSteps) {
+                this.nextStep = 0;
             }
         }
         this.timerID = window.setTimeout(callScheduler, 100.0);
@@ -123,7 +143,7 @@ music = {
             this.source.buffer = bufferList[2];
             this.source.loop = false;
             this.source.connect(context.destination);
-            this.source.noteOn(0);
+            this.source.start(0);
             this.isPlaying = true;
         }
     },
@@ -133,24 +153,9 @@ music = {
     }
 };
 
-playButton.onclick = function () {
-    music.start();
-    drumMachine.start();
-};
-
-pauseButton.onclick = function () {
-    //have not solved the pause problem yet, cowbell button for now
-    drumMachine.playSound(bufferList[3], 0);
-};
-
-stopButton.onclick = function () {
-    music.stop();
-    drumMachine.stop();
-};
-
-function init() {
+window.onload = function () {
     var i;
-    context = new webkitAudioContext();
+    context = new AudioContext();
 
     //start with a simple drum pattern
     for (i = 0; i < 16; i += 1) {
@@ -164,6 +169,4 @@ function init() {
 
     //load all audio files
     bufferLoader.load();
-}
-
-window.onload = init();
+};
